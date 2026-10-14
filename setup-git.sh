@@ -53,4 +53,51 @@ fi
     || echo "ERROR: package install failed"
 ) &
 
-echo "main script done, venv setup running in background"
+# 5. Claude Code, in the background and independent of the venv.
+#    Needs ANTHROPIC_API_KEY in the environment to be usable (set it in the Onyxia launcher).
+(
+  export PATH="$HOME/.local/bin:$PATH"
+
+  if command -v claude >/dev/null 2>&1; then
+    echo "Claude Code already installed: $(claude --version)"
+  else
+    echo "installing Claude Code (native installer)"
+    if curl -fsSL https://claude.ai/install.sh -o /tmp/claude-install.sh && bash /tmp/claude-install.sh; then
+      echo "=== Claude Code installed OK $(date) ==="
+    else
+      echo "native installer failed, trying npm"
+      if npm install -g --prefix "$HOME/.local" @anthropic-ai/claude-code; then
+        echo "=== Claude Code installed OK via npm $(date) ==="
+      else
+        echo "ERROR: Claude Code install failed"
+      fi
+    fi
+  fi
+
+  # Make sure terminals find ~/.local/bin
+  grep -q '\.local/bin' "$HOME/.bashrc" 2>/dev/null \
+    || echo 'export PATH="$HOME/.local/bin:$PATH"' >> "$HOME/.bashrc"
+
+  if [ -n "$ANTHROPIC_API_KEY" ]; then
+    echo "WARNING: ANTHROPIC_API_KEY is set, Claude Code will bill the API per token instead of your subscription"
+  else
+    echo "no ANTHROPIC_API_KEY: log in with your Claude account (run claude, then /login)"
+  fi
+) &
+
+# 6. Claude Code VS Code extension (code-server installs from the Open VSX registry)
+(
+  if command -v code-server >/dev/null 2>&1; then
+    if code-server --list-extensions 2>/dev/null | grep -qi '^anthropic.claude-code$'; then
+      echo "Claude Code extension already installed"
+    elif code-server --install-extension anthropic.claude-code; then
+      echo "=== Claude Code extension installed OK $(date) ==="
+    else
+      echo "ERROR: Claude Code extension install failed"
+    fi
+  else
+    echo "code-server not found, skipping the extension install"
+  fi
+) &
+
+echo "main script done, venv, Claude Code and extension setup running in background"
