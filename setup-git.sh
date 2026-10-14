@@ -17,6 +17,16 @@ else
   echo "WARNING: GIT_USER_NAME or GIT_PERSONAL_ACCESS_TOKEN is empty, installs will fail"
 fi
 
+# Shell setup for new terminals (done right away, so it does not depend on the installs below).
+# - ~/.local/bin on the PATH (claude, uv)
+# - default venv activated automatically once it exists
+touch "$HOME/.bashrc"
+grep -q '\.local/bin' "$HOME/.bashrc" \
+  || echo 'export PATH="$HOME/.local/bin:$PATH"' >> "$HOME/.bashrc"
+grep -q 'work/\.venv/bin/activate' "$HOME/.bashrc" \
+  || echo '[ -f "$HOME/work/.venv/bin/activate" ] && . "$HOME/work/.venv/bin/activate"' >> "$HOME/.bashrc"
+echo "~/.bashrc updated (PATH and venv activation)"
+
 # 2-4. Venv and packages, run in the background so the service start is not blocked
 (
   export PATH="$HOME/.local/bin:$PATH"
@@ -42,15 +52,37 @@ fi
   VENV="$HOME/work/.venv"
   [ -x "$VENV/bin/python" ] || uv venv "$VENV" || { echo "ERROR: venv creation failed"; exit 1; }
 
-  # Install the packages
-  uv pip install --python "$VENV/bin/python" \
+  PY="$VENV/bin/python"
+
+  # Public packages: general data science + geospatial (binary wheels, no system GDAL needed).
+  # Installed in one go; if that fails, one by one so a single bad package is named in the log
+  # and does not block the others.
+  PUBLIC_PKGS="
+    requests numpy pandas scipy scikit-learn statsmodels pyarrow openpyxl
+    matplotlib seaborn plotly
+    geopandas shapely pyproj pyogrio fiona rasterio xarray rioxarray netCDF4 h5netcdf
+    rasterstats exactextract folium contextily mapclassify h3 osmnx
+    duckdb sqlalchemy geoalchemy2 psycopg2-binary
+    pystac-client odc-stac planetary-computer earthaccess cdsapi
+    s3fs boto3 requests tqdm python-dotenv pytest ruff ipykernel
+  "
+  if uv pip install --python "$PY" $PUBLIC_PKGS; then
+    echo "=== public packages installed OK $(date) ==="
+  else
+    echo "bulk install failed, installing one by one"
+    for p in $PUBLIC_PKGS; do
+      uv pip install --python "$PY" "$p" || echo "FAILED: $p"
+    done
+  fi
+
+  # Internal packages (private GitLab, uses the git credential helper set above)
+  uv pip install --python "$PY" \
     "git+https://gitlab.algobank.oecd.org/geospatial-unit/utilities/oecd-utils.git" \
     "git+https://gitlab.algobank.oecd.org/OECDMAPS/oecd-maps-package.git" \
     "git+https://gitlab.algobank.oecd.org/municipal/municipal-data-utils.git" \
     "git+https://gitlab.algobank.oecd.org/Alexandre.BANQUET/oecd-plots.git" \
-    ipykernel \
-    && echo "=== install finished OK $(date) ===" \
-    || echo "ERROR: package install failed"
+    && echo "=== internal packages installed OK $(date) ===" \
+    || echo "ERROR: internal package install failed"
 ) &
 
 # 5. Claude Code, in the background and independent of the venv.
@@ -73,10 +105,6 @@ fi
       fi
     fi
   fi
-
-  # Make sure terminals find ~/.local/bin
-  grep -q '\.local/bin' "$HOME/.bashrc" 2>/dev/null \
-    || echo 'export PATH="$HOME/.local/bin:$PATH"' >> "$HOME/.bashrc"
 
   if [ -n "$ANTHROPIC_API_KEY" ]; then
     echo "WARNING: ANTHROPIC_API_KEY is set, Claude Code will bill the API per token instead of your subscription"
