@@ -1,17 +1,56 @@
+#!/bin/sh
+# Onyxia init script: git credentials for the internal GitLab + default venv.
+# Everything is logged to /tmp/setup-git.log (read it with: cat /tmp/setup-git.log).
+# No secret in this file: the token is read from the Onyxia environment at run time.
+
+LOG=/tmp/setup-git.log
+exec >> "$LOG" 2>&1
+echo "=== setup-git.sh started $(date) as $(whoami), HOME=$HOME ==="
+
+# 1. Git credentials for the internal GitLab
 git config --global credential.https://gitlab.algobank.oecd.org.helper '!f() { echo "username=$GIT_USER_NAME"; echo "password=$GIT_PERSONAL_ACCESS_TOKEN"; }; f'
+echo "git credential helper configured"
 
-# 2. Make sure uv is available
-export PATH="$HOME/.local/bin:$PATH"
-command -v uv >/dev/null 2>&1 || pip install --user uv
+if [ -n "$GIT_USER_NAME" ] && [ -n "$GIT_PERSONAL_ACCESS_TOKEN" ]; then
+  echo "git variables: present"
+else
+  echo "WARNING: GIT_USER_NAME or GIT_PERSONAL_ACCESS_TOKEN is empty, installs will fail"
+fi
 
-# 3. Create the default venv once (in the work directory so it survives restarts if persistence is on)
-VENV="$HOME/work/.venv"
-[ -d "$VENV" ] || uv venv "$VENV"
+# 2-4. Venv and packages, run in the background so the service start is not blocked
+(
+  export PATH="$HOME/.local/bin:$PATH"
 
-# 4. Install the packages
-uv pip install --python "$VENV/bin/python" \
-  "git+https://gitlab.algobank.oecd.org/geospatial-unit/utilities/oecd-utils.git" \
-  "git+https://gitlab.algobank.oecd.org/OECDMAPS/oecd-maps-package.git" \
-  "git+https://gitlab.algobank.oecd.org/municipal/municipal-data-utils.git" \
-  "git+https://gitlab.algobank.oecd.org/Alexandre.BANQUET/oecd-plots.git" \
-  ipykernel
+  # Wait (up to 1 minute) for the work directory to be ready and writable
+  i=0
+  until [ -w "$HOME/work" ] || [ "$i" -ge 30 ]; do
+    sleep 2
+    i=$((i + 1))
+  done
+  if [ ! -w "$HOME/work" ]; then
+    echo "ERROR: $HOME/work is not writable, aborting"
+    exit 1
+  fi
+
+  # Make sure uv is available
+  if ! command -v uv >/dev/null 2>&1; then
+    pip install --user uv || python3 -m pip install --user --break-system-packages uv
+  fi
+  command -v uv >/dev/null 2>&1 || { echo "ERROR: uv not available, aborting"; exit 1; }
+
+  # Create the default venv (recreated if a previous run left it broken)
+  VENV="$HOME/work/.venv"
+  [ -x "$VENV/bin/python" ] || uv venv "$VENV" || { echo "ERROR: venv creation failed"; exit 1; }
+
+  # Install the packages
+  uv pip install --python "$VENV/bin/python" \
+    "git+https://gitlab.algobank.oecd.org/geospatial-unit/utilities/oecd-utils.git" \
+    "git+https://gitlab.algobank.oecd.org/OECDMAPS/oecd-maps-package.git" \
+    "git+https://gitlab.algobank.oecd.org/municipal/municipal-data-utils.git" \
+    "git+https://gitlab.algobank.oecd.org/Alexandre.BANQUET/oecd-plots.git" \
+    ipykernel \
+    && echo "=== install finished OK $(date) ===" \
+    || echo "ERROR: package install failed"
+) &
+
+echo "main script done, venv setup running in background"
