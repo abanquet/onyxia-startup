@@ -58,8 +58,8 @@ echo "~/.bashrc updated (PATH and venv activation)"
   # Installed in one go; if that fails, one by one so a single bad package is named in the log
   # and does not block the others.
   PUBLIC_PKGS="
-    requests numpy pandas scipy scikit-learn statsmodels pyarrow openpyxl
-    matplotlib seaborn plotly
+    numpy pandas scipy scikit-learn statsmodels pyarrow openpyxl
+    matplotlib seaborn plotly pycountry 
     geopandas shapely pyproj pyogrio fiona rasterio xarray rioxarray netCDF4 h5netcdf
     rasterstats exactextract folium contextily mapclassify h3 osmnx
     duckdb sqlalchemy geoalchemy2 psycopg2-binary
@@ -78,6 +78,7 @@ echo "~/.bashrc updated (PATH and venv activation)"
   # Internal packages (private GitLab, uses the git credential helper set above)
   uv pip install --python "$PY" \
     "git+https://gitlab.algobank.oecd.org/geospatial-unit/utilities/oecd-utils.git" \
+    "git+https://gitlab.algobank.oecd.org/geospatial-unit/utilities/onyxia-utils.git" \
     "git+https://gitlab.algobank.oecd.org/OECDMAPS/oecd-maps-package.git" \
     "git+https://gitlab.algobank.oecd.org/municipal/municipal-data-utils.git" \
     "git+https://gitlab.algobank.oecd.org/Alexandre.BANQUET/oecd-plots.git" \
