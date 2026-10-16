@@ -82,11 +82,10 @@ echo "~/.bashrc updated (PATH and venv activation)"
     "git+https://gitlab.algobank.oecd.org/OECDMAPS/oecd-maps-package.git" \
     "git+https://gitlab.algobank.oecd.org/municipal/municipal-data-utils.git" \
     "git+https://gitlab.algobank.oecd.org/Alexandre.BANQUET/oecd-plots.git" \
-    "git+https://gitlab.algobank.oecd.org/geospatial-unit/utilities/llm-skills.git" \
     && echo "=== internal packages installed OK $(date) ===" \
     || echo "ERROR: internal package install failed"
 ) &
-
+git clone https://gitlab.algobank.oecd.org/geospatial-unit/utilities/llm-skills.git ~/llm-skills
 mkdir -p ~/.claude/skills
 ln -sfn ~/llm-skills/* ~/.claude/skills/
 
