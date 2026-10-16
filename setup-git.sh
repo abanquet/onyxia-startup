@@ -59,7 +59,7 @@ echo "~/.bashrc updated (PATH and venv activation)"
   # and does not block the others.
   PUBLIC_PKGS="
     numpy pandas scipy scikit-learn statsmodels pyarrow openpyxl
-    matplotlib seaborn plotly pycountry 
+    matplotlib seaborn plotly pycountry pykakasi topojson
     geopandas shapely pyproj pyogrio fiona rasterio xarray rioxarray netCDF4 h5netcdf
     rasterstats exactextract folium contextily mapclassify h3 osmnx
     duckdb sqlalchemy geoalchemy2 psycopg2-binary
