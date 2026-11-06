@@ -77,17 +77,56 @@ echo "~/.bashrc updated (PATH and venv activation)"
 
   # Internal packages (private GitLab, uses the git credential helper set above)
   uv pip install --python "$PY" \
-    "git+https://gitlab.algobank.oecd.org/geospatial-unit/utilities/oecd-utils.git" \
+    "git+https://gitlab.algobank.oecd.org/OECDMAPS/oecd-utils.git" \
     "git+https://gitlab.algobank.oecd.org/geospatial-unit/utilities/onyxia-utils.git" \
     "git+https://gitlab.algobank.oecd.org/OECDMAPS/oecd-maps-package.git" \
     "git+https://gitlab.algobank.oecd.org/municipal/municipal-data-utils.git" \
-    "git+https://gitlab.algobank.oecd.org/Alexandre.BANQUET/oecd-plots.git" \
+    "git+https://gitlab.algobank.oecd.org/OECDMAPS/oecd-plots.git" \
     && echo "=== internal packages installed OK $(date) ===" \
     || echo "ERROR: internal package install failed"
 ) &
-git clone https://gitlab.algobank.oecd.org/geospatial-unit/utilities/llm-skills.git ~/llm-skills
-mkdir -p ~/.claude/skills
-ln -sfn ~/llm-skills/* ~/.claude/skills/
+
+# Claude skills, in ~/.claude/skills
+SKILLS="$HOME/.claude/skills"
+mkdir -p "$SKILLS"
+# Remove links left dangling by skills that moved out of llm-skills
+find "$SKILLS" -maxdepth 1 -xtype l -delete
+
+# Workflow skills (environments, tabular-data, ...): llm-skills, linked so a git pull updates them
+if [ -d "$HOME/llm-skills/.git" ]; then
+  git -C "$HOME/llm-skills" pull --ff-only || echo "WARNING: llm-skills pull failed"
+else
+  git clone https://gitlab.algobank.oecd.org/geospatial-unit/utilities/llm-skills.git "$HOME/llm-skills" \
+    || echo "WARNING: llm-skills clone failed"
+fi
+for d in "$HOME"/llm-skills/*/; do
+  [ -f "${d}SKILL.md" ] && ln -sfn "${d%/}" "$SKILLS/$(basename "$d")"
+done
+
+# Skills that live in a repository: clone it, then copy each skill folder (the one holding a
+# SKILL.md) into ~/.claude/skills. $1 = repository URL, $2 = folder of the skills in the repository
+# ("." for the root). Copies replace earlier copies or links of the same name.
+copy_skills() {
+  tmp=$(mktemp -d)
+  if git clone --depth 1 "$1" "$tmp/repo"; then
+    for d in "$tmp/repo/$2"/*/; do
+      if [ -f "${d}SKILL.md" ]; then
+        rm -rf "$SKILLS/$(basename "$d")"
+        cp -r "${d%/}" "$SKILLS/"
+        echo "skill installed: $(basename "$d")"
+      fi
+    done
+  else
+    echo "WARNING: could not clone $1, its skills were not installed"
+  fi
+  rm -rf "$tmp"
+}
+
+copy_skills https://gitlab.algobank.oecd.org/OECDMAPS/oecd-utils.git skills
+copy_skills https://gitlab.algobank.oecd.org/OECDMAPS/oecd-plots.git skills
+copy_skills https://gitlab.algobank.oecd.org/OECDMAPS/oecd-maps-package.git skills
+# Horizontal skills (geographies, style guide, project workflow, ...): at the root of the repository
+copy_skills https://gitlab.algobank.oecd.org/geospatial-unit/llm-skills/oecd-cfe-skills.git .
 
 # 5. Claude Code, in the background and independent of the venv.
 #    Needs ANTHROPIC_API_KEY in the environment to be usable (set it in the Onyxia launcher).
