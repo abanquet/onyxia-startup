@@ -125,6 +125,7 @@ copy_skills() {
 copy_skills https://gitlab.algobank.oecd.org/OECDMAPS/oecd-utils.git skills
 copy_skills https://gitlab.algobank.oecd.org/OECDMAPS/oecd-plots.git skills
 copy_skills https://gitlab.algobank.oecd.org/OECDMAPS/oecd-maps-package.git skills
+copy_skills https://gitlab.algobank.oecd.org/municipal/municipal-data-utils.git skills
 # Horizontal skills (geographies, style guide, project workflow, ...): at the root of the repository
 copy_skills https://gitlab.algobank.oecd.org/geospatial-unit/llm-skills/oecd-cfe-skills.git .
 
