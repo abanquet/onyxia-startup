@@ -127,7 +127,7 @@ copy_skills https://gitlab.algobank.oecd.org/OECDMAPS/oecd-plots.git skills
 copy_skills https://gitlab.algobank.oecd.org/OECDMAPS/oecd-maps-package.git skills
 copy_skills https://gitlab.algobank.oecd.org/municipal/municipal-data-utils.git skills
 # Horizontal skills (geographies, style guide, project workflow, ...): at the root of the repository
-copy_skills https://gitlab.algobank.oecd.org/geospatial-unit/llm-skills/oecd-cfe-skills.git .
+copy_skills https://gitlab.algobank.oecd.org/OECDMAPS/oecd-cfe-llm-skills/oecd-cfe-skills.git .
 
 # 5. Claude Code, in the background and independent of the venv.
 #    Needs ANTHROPIC_API_KEY in the environment to be usable (set it in the Onyxia launcher).
